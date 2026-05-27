@@ -1,0 +1,56 @@
+const CACHE_NAME = "school-match-cache-v39";
+const ASSETS = [
+  "./",
+  "./index.html",
+  "./styles-v39.css",
+  "./app-v39.js",
+  "./manifest-v39.json",
+  "./assets/apple-touch-icon-ios26.png",
+  "./assets/favicon-32-ios26.png",
+  "./assets/pwa-icon-192-ios26.png",
+  "./assets/pwa-icon-512-ios26.png",
+  "./assets/school-bg-ios26.png",
+  "./assets/school-icons-c3-v34.png",
+  "./assets/tool-icons-ios26.png",
+  "./assets/bgm-school-prank-v2.wav",
+];
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches
+      .open(CACHE_NAME)
+      .then((cache) => cache.addAll(ASSETS))
+      .then(() => self.skipWaiting()),
+  );
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+      .then(() => self.clients.claim()),
+  );
+});
+
+self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
+
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match("./index.html")),
+    );
+    return;
+  }
+
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      if (cached) return cached;
+      return fetch(event.request).then((response) => {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        return response;
+      });
+    }),
+  );
+});

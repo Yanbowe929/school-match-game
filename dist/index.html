@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#f7c95d" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="description" content="一个适合手机竖屏游玩的学校恶搞主题三消小游戏。" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="课间三消" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>课间三消</title>
+    <link rel="manifest" href="./manifest-v39.json" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon-ios26.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="./assets/apple-touch-icon-ios26.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32-ios26.png" />
+    <link rel="stylesheet" href="./styles-v39.css" />
+  </head>
+  <body>
+    <main class="game-shell" aria-label="课间三消游戏">
+      <section class="screen screen-start is-active" id="startScreen">
+        <div class="start-content">
+          <p class="eyebrow">School Match</p>
+          <h1>课间三消</h1>
+          <div class="daily-badge" id="dailyBadge">今日 3 关</div>
+          <p class="start-copy">把课桌上的整蛊证据凑成三件套，赶在巡查前塞回抽屉。</p>
+          <div class="level-select" id="levelSelect" aria-label="选择关卡"></div>
+          <button class="primary-button" id="startButton" type="button">开始挑战</button>
+        </div>
+      </section>
+
+      <section class="screen screen-game" id="gameScreen">
+        <header class="top-bar">
+          <button class="icon-button" id="homeButton" type="button" aria-label="返回首页">⌂</button>
+          <div class="level-chip">
+            <span>第</span>
+            <strong id="levelLabel">1</strong>
+            <span>关</span>
+          </div>
+          <label class="volume-control" aria-label="BGM volume">
+            <span>♪</span>
+            <input id="volumeSlider" type="range" min="0" max="100" step="1" value="28" />
+          </label>
+          <button class="icon-button" id="soundButton" type="button" aria-label="音效开关">♪</button>
+          <button class="icon-button" id="restartButton" type="button" aria-label="重新开始">↻</button>
+        </header>
+
+        <div class="status-row">
+          <div class="stat-pill">
+            <strong id="scoreLabel">0</strong>
+            <span>分</span>
+          </div>
+          <div class="progress-wrap" aria-label="剩余牌块">
+            <div class="progress-bar" id="progressBar"></div>
+          </div>
+          <span id="remainingLabel">0</span>
+          <div class="stat-pill" id="movePill">
+            <strong id="moveLabel">0</strong>
+            <span id="moveUnitLabel">步</span>
+          </div>
+        </div>
+
+        <section class="board-wrap" aria-label="游戏牌堆">
+          <div class="board" id="board"></div>
+          <div class="stash-shelf" id="stashShelf" aria-label="移出暂存区"></div>
+        </section>
+
+        <section class="tray-wrap" aria-label="收集槽">
+          <div class="tray" id="tray"></div>
+        </section>
+
+        <section class="tools" aria-label="道具">
+          <button class="tool-button" id="shuffleButton" type="button">
+            <span class="tool-icon icon-shuffle"></span>
+            <strong>洗牌</strong>
+          </button>
+          <button class="tool-button" id="stashButton" type="button">
+            <span class="tool-icon icon-stash"></span>
+            <strong>移出</strong>
+          </button>
+          <button class="tool-button" id="magnetButton" type="button">
+            <span class="tool-icon icon-magnet"></span>
+            <strong>磁吸</strong>
+          </button>
+        </section>
+        <div class="toast" id="toast" aria-live="polite"></div>
+      </section>
+
+      <section class="screen screen-result" id="resultScreen" aria-live="polite">
+        <div class="result-panel">
+          <div class="result-stamp" id="resultStamp">CLEAR</div>
+          <p class="eyebrow" id="resultKicker">完成</p>
+          <h2 id="resultTitle">通关</h2>
+          <div class="result-stars" id="resultStars" aria-label="通关星级"></div>
+          <p id="resultText">下一关已经准备好了。</p>
+          <div class="result-stats">
+            <span>分数 <strong id="resultScore">0</strong></span>
+            <span>步数 <strong id="resultMoves">0</strong></span>
+          </div>
+          <div class="result-actions">
+            <button class="secondary-button" id="resultRestartButton" type="button">再来一次</button>
+            <button class="primary-button" id="nextButton" type="button">下一关</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="./app-v39.js"></script>
+  </body>
+</html>
