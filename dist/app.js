@@ -55,6 +55,8 @@ const LEVELS = [
     boardMapXOffset: 4,
     boardMapYScale: 82,
     boardMapYOffset: 4,
+    openingMatchGroups: 3,
+    surfaceMatchGroups: [4, 3, 2],
     timeLimit: 240,
     timeBonus: 15,
     hardLayouts: ["islands", "snake", "sandwich", "lockbox"],
@@ -255,6 +257,10 @@ function createDailyRng(levelIndex) {
   return mulberry32(hashString(`${dailyKey}:level:${levelIndex + 1}`));
 }
 
+function createOpeningRng(levelIndex) {
+  return mulberry32(hashString(`${dailyKey}:level:${levelIndex + 1}:opening`));
+}
+
 function getDailyLayout(level, levelIndex) {
   if (!level.hardLayouts?.length) return null;
   const dayNumber = Math.floor(new Date(`${dailyKey}T00:00:00`).getTime() / 86400000);
@@ -366,6 +372,8 @@ function startGame(levelIndex = 0) {
   hideToast();
   showScreen("game");
   render();
+  seedOpeningMatchTypes(level, createOpeningRng(levelIndex));
+  render();
   startLevelTimer();
 }
 
@@ -386,13 +394,88 @@ function createLevel(levelIndex) {
   const selected = layout
     ? createHardLayoutSpots(level, bag.length, rng, layout)
     : createClusteredSpots(level, bag.length, rng);
+  const seededBag = seedSurfaceMatchTypes(selected, bag, level, typePool, rng);
 
   return selected.map((spot, index) => ({
     id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${index}`,
-    type: bag[index],
+    type: seededBag[index],
     ...spot,
     removed: false,
   }));
+}
+
+function seedSurfaceMatchTypes(spots, bag, level, typePool, rng) {
+  if (!level.surfaceMatchGroups?.length) return bag;
+
+  const nextBag = [...bag];
+  const locked = new Set();
+  const seededTypes = shuffleArray(typePool.map((type) => type.id), rng);
+  let typeIndex = 0;
+
+  level.surfaceMatchGroups.forEach((groupCount, depth) => {
+    const z = level.layers - 1 - depth;
+    const layerIndices = spots
+      .map((spot, index) => ({ spot, index }))
+      .filter(({ spot }) => spot.z === z)
+      .sort((a, b) => getTileStackRank(b.spot) - getTileStackRank(a.spot))
+      .map(({ index }) => index);
+
+    for (let group = 0; group < groupCount && layerIndices.length >= 3 && typeIndex < seededTypes.length; group += 1) {
+      const indices = layerIndices.splice(0, 3);
+      if (placeTypeOnIndices(nextBag, indices, seededTypes[typeIndex], locked)) {
+        typeIndex += 1;
+      }
+    }
+  });
+
+  return nextBag;
+}
+
+function placeTypeOnIndices(types, indices, type, locked) {
+  const protectedIndices = new Set([...locked, ...indices]);
+  const targets = indices.filter((index) => types[index] !== type);
+  const swapIndices = types
+    .map((candidate, candidateIndex) => ({ candidate, candidateIndex }))
+    .filter(({ candidate, candidateIndex }) => candidate === type && !protectedIndices.has(candidateIndex))
+    .map(({ candidateIndex }) => candidateIndex);
+
+  if (swapIndices.length < targets.length) return false;
+
+  targets.forEach((index, targetIndex) => {
+    const swapIndex = swapIndices[targetIndex];
+    [types[index], types[swapIndex]] = [types[swapIndex], types[index]];
+  });
+
+  indices.forEach((index) => locked.add(index));
+  return true;
+}
+
+function seedOpeningMatchTypes(level, rng) {
+  const groupCount = level.openingMatchGroups ?? 0;
+  if (groupCount <= 0) return;
+
+  const freeIds = getFreeTileIds();
+  const freeIndices = state.tiles
+    .map((tile, index) => ({ tile, index }))
+    .filter(({ tile }) => freeIds.has(tile.id))
+    .sort((a, b) => getTileStackRank(b.tile) - getTileStackRank(a.tile))
+    .map(({ index }) => index);
+  const types = state.tiles.map((tile) => tile.type);
+  const typePool = shuffleArray([...new Set(types)], rng);
+  const locked = new Set();
+
+  for (let group = 0; group < groupCount && freeIndices.length >= 3 && group < typePool.length; group += 1) {
+    const indices = freeIndices.splice(0, 3);
+    if (placeTypeOnIndices(types, indices, typePool[group], locked)) {
+      indices.forEach((index) => {
+        state.tiles[index].type = types[index];
+      });
+    }
+  }
+
+  state.tiles.forEach((tile, index) => {
+    tile.type = types[index];
+  });
 }
 
 function createClusteredSpots(level, count, rng) {
@@ -1829,7 +1912,7 @@ document.addEventListener("visibilitychange", () => syncBgm());
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js?v=40").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=41").catch(() => {});
   });
 }
 
