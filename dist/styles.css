@@ -284,8 +284,8 @@ h2 {
 }
 
 .screen-game[data-level="3"] {
-  --tile-size: clamp(38px, 10.9vw, 46px);
-  --tile-radius: 12px;
+  --tile-size: clamp(44px, 12.2vw, 54px);
+  --tile-radius: 13px;
 }
 
 .top-bar {
@@ -1336,6 +1336,10 @@ h2 {
 @media (max-height: 700px) {
   :root {
     --tile-size: clamp(40px, 12.8vw, 52px);
+  }
+
+  .screen-game[data-level="3"] {
+    --tile-size: clamp(42px, 12vw, 50px);
   }
 
   .game-shell {

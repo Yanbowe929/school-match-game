@@ -47,10 +47,14 @@ const LEVELS = [
     minSpacingY: 2,
     layerSpread: 2.65,
     layerFan: 1.05,
-    viewMinX: -0.8,
-    viewMinY: -0.8,
-    viewWidth: 15.3,
-    viewHeight: 18.3,
+    viewMinX: -0.2,
+    viewMinY: 1.1,
+    viewWidth: 14.5,
+    viewHeight: 16.7,
+    boardMapXScale: 78,
+    boardMapXOffset: 4,
+    boardMapYScale: 82,
+    boardMapYOffset: 4,
     timeLimit: 240,
     timeBonus: 15,
     hardLayouts: ["islands", "snake", "sandwich", "lockbox"],
@@ -720,8 +724,7 @@ function renderBoard() {
 
   activeTiles.forEach((tile) => {
     const node = existingTiles.get(tile.id) ?? createTileNode(tile);
-    const x = ((tile.x + tile.jitterX - bounds.minX) / bounds.width) * BOARD_MAP_X_SCALE + BOARD_MAP_X_OFFSET;
-    const y = ((tile.y + tile.jitterY - bounds.minY) / bounds.height) * BOARD_MAP_Y_SCALE + BOARD_MAP_Y_OFFSET;
+    const { x, y } = getTileBoardPosition(tile, bounds);
     const isFree = freeIds.has(tile.id);
     const disabled = !isFree || state.finished || state.animatingMatch;
 
@@ -788,13 +791,12 @@ function renderTray() {
       tileNode.dataset.trayId = item.id;
       tileNode.classList.remove("is-new");
       tileNode.classList.toggle("is-arriving", item.arriving || state.arrivingIds.includes(item.id));
-      tileNode.classList.remove("is-matching", "match-anchor", "match-push-mid", "match-push-last");
       tileNode.querySelectorAll(".smoke-particle").forEach((particle) => particle.remove());
       const matchIndex = state.matchingIds.indexOf(item.id);
-      if (matchIndex >= 0) {
-        tileNode.classList.add("is-matching");
-        tileNode.classList.add(matchIndex === 0 ? "match-anchor" : matchIndex === 1 ? "match-push-mid" : "match-push-last");
-      }
+      tileNode.classList.toggle("is-matching", matchIndex >= 0);
+      tileNode.classList.toggle("match-anchor", matchIndex === 0);
+      tileNode.classList.toggle("match-push-mid", matchIndex === 1);
+      tileNode.classList.toggle("match-push-last", matchIndex === 2);
       if (slot.firstElementChild !== tileNode) slot.replaceChildren(tileNode);
     } else if (slot.firstElementChild) {
       slot.replaceChildren();
@@ -892,7 +894,8 @@ function completeTileFlight(tileId, type) {
 
   if (state.finished) return;
   render();
-  if (state.flightCount > 0 || resolveTrayMatch(type)) return;
+  if (resolveTrayMatch(type)) return;
+  if (state.flightCount > 0) return;
   evaluateGame();
   processQueuedPick();
 }
@@ -1021,7 +1024,7 @@ function findTrayMatch(type) {
 }
 
 function resolveTrayMatch(preferredType = null) {
-  if (state.finished || state.animatingMatch || state.flightCount > 0) return false;
+  if (state.finished || state.animatingMatch) return false;
 
   const types = [...new Set(state.tray.map((tile) => tile.type))];
   if (preferredType) {
@@ -1684,8 +1687,7 @@ function getTileStackRank(tile) {
 }
 
 function getTileRect(tile, bounds, boardBox, tileSize) {
-  const x = ((tile.x + tile.jitterX - bounds.minX) / bounds.width) * BOARD_MAP_X_SCALE + BOARD_MAP_X_OFFSET;
-  const y = ((tile.y + tile.jitterY - bounds.minY) / bounds.height) * BOARD_MAP_Y_SCALE + BOARD_MAP_Y_OFFSET;
+  const { x, y } = getTileBoardPosition(tile, bounds);
   const left = (boardBox.width * x) / 100;
   const top = (boardBox.height * y) / 100;
   return {
@@ -1727,6 +1729,24 @@ function getTileSizePx() {
   const width = Number.parseFloat(getComputedStyle(probe).width) || probe.getBoundingClientRect().width || 52;
   probe.remove();
   return width;
+}
+
+function getTileBoardPosition(tile, bounds) {
+  const map = getBoardMap();
+  return {
+    x: ((tile.x + tile.jitterX - bounds.minX) / bounds.width) * map.xScale + map.xOffset,
+    y: ((tile.y + tile.jitterY - bounds.minY) / bounds.height) * map.yScale + map.yOffset,
+  };
+}
+
+function getBoardMap() {
+  const level = LEVELS[state.levelIndex] ?? LEVELS[0];
+  return {
+    xScale: level.boardMapXScale ?? BOARD_MAP_X_SCALE,
+    xOffset: level.boardMapXOffset ?? BOARD_MAP_X_OFFSET,
+    yScale: level.boardMapYScale ?? BOARD_MAP_Y_SCALE,
+    yOffset: level.boardMapYOffset ?? BOARD_MAP_Y_OFFSET,
+  };
 }
 
 function getBoardBounds() {
@@ -1809,7 +1829,7 @@ document.addEventListener("visibilitychange", () => syncBgm());
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js?v=39").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=40").catch(() => {});
   });
 }
 
