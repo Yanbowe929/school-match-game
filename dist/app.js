@@ -60,7 +60,7 @@ const LEVELS = [
     structuredHardLayout: true,
     timeLimit: 240,
     timeBonus: 15,
-    hardLayouts: ["islands", "snake", "sandwich", "lockbox"],
+    hardLayouts: ["grid-islands", "grid-stairs", "grid-bands", "grid-ring"],
     name: "地狱巡查",
   },
 ];
@@ -567,41 +567,143 @@ function createStructuredHardLayoutSpots(level, count, rng, layout) {
 
 function createStructuredGridCandidates(level, quota, z, layout, rng) {
   const layerT = level.layers <= 1 ? 0 : z / (level.layers - 1);
-  const cols = Math.max(5, Math.min(7, Math.ceil(Math.sqrt(quota * 1.16))));
-  const rows = Math.max(4, Math.ceil(quota / cols));
   const stepX = 2.42 - layerT * 0.04;
   const stepY = 2.34 - layerT * 0.05;
   const centerX = (level.cols - 1) / 2;
   const centerY = (level.rows - 1) / 2;
   const midLayer = (level.layers - 1) / 2;
-  const layoutBias = {
-    islands: -0.16,
-    snake: 0.12,
-    sandwich: 0,
-    lockbox: 0.18,
-  }[layout] ?? 0;
-  const layerShiftX = ((z % 2) ? 0.46 : -0.46) + (z - midLayer) * 0.1 + layoutBias;
+  const layerShiftX = ((z % 2) ? 0.46 : -0.46) + (z - midLayer) * 0.1;
   const layerShiftY = (((z + 1) % 2) ? 0.36 : -0.36) + (midLayer - z) * 0.07;
-  const candidates = [];
+  const cells = getStructuredLayoutCells(layout, quota, z, level.layers);
 
-  for (let row = 0; row < rows; row += 1) {
-    for (let col = 0; col < cols; col += 1) {
-      const dx = (col - (cols - 1) / 2) * stepX;
-      const dy = (row - (rows - 1) / 2) * stepY;
-      const corner = Math.abs(col - (cols - 1) / 2) + Math.abs(row - (rows - 1) / 2);
-      const isCorner = (col === 0 || col === cols - 1) && (row === 0 || row === rows - 1);
-      candidates.push({
-        x: clamp(centerX + dx + layerShiftX, 0.2, level.cols + level.layers * 0.28),
-        y: clamp(centerY + dy + layerShiftY, 0.2, level.rows + level.layers * 0.28),
-        z,
-        jitterX: 0,
-        jitterY: 0,
-        order: corner + (isCorner ? 0.42 : 0) + rng() * 0.015,
+  return cells
+    .map((cell) => ({
+      x: clamp(centerX + cell.x * stepX + layerShiftX, 0.2, level.cols + level.layers * 0.28),
+      y: clamp(centerY + cell.y * stepY + layerShiftY, 0.2, level.rows + level.layers * 0.28),
+      z,
+      jitterX: 0,
+      jitterY: 0,
+      order: cell.order + rng() * 0.015,
+    }))
+    .sort((a, b) => a.order - b.order);
+}
+
+function getStructuredLayoutCells(layout, quota, z, layers) {
+  if (layout === "grid-islands") return createIslandGridCells(quota, z, layers);
+  if (layout === "grid-stairs") return createStairGridCells(quota, z, layers);
+  if (layout === "grid-bands") return createBandGridCells(quota, z, layers);
+  return createRingGridCells(quota, z, layers);
+}
+
+function createIslandGridCells(quota, z, layers) {
+  const cells = [];
+  const centers = [
+    { x: -2.1, y: -3.1 },
+    { x: 2.1, y: -3.1 },
+    { x: -2.1, y: 2.7 },
+    { x: 2.1, y: 2.7 },
+  ];
+  const radius = 1 + (layers - z - 1) * 0.06;
+
+  centers.forEach((center, island) => {
+    for (let row = -1; row <= 1; row += 1) {
+      for (let col = -1; col <= 1; col += 1) {
+        cells.push({
+          x: center.x + col * radius,
+          y: center.y + row * radius,
+          order: Math.abs(col) + Math.abs(row) + island * 0.12,
+        });
+      }
+    }
+  });
+
+  return fillStructuredCells(cells, quota);
+}
+
+function createStairGridCells(quota, z, layers) {
+  const cells = [];
+  const width = 6;
+  const height = 7;
+  const lean = (z % 2) ? 1 : -1;
+
+  for (let row = 0; row < height; row += 1) {
+    const start = Math.max(0, Math.floor(row * 0.42));
+    const end = Math.min(width - 1, start + 3 + (row % 2));
+    for (let col = start; col <= end; col += 1) {
+      cells.push({
+        x: (col - (width - 1) / 2) + lean * (row - 3) * 0.28,
+        y: row - (height - 1) / 2,
+        order: row * 0.38 + Math.abs(col - start - 1.5) * 0.16,
       });
     }
   }
 
-  return candidates.sort((a, b) => a.order - b.order);
+  return fillStructuredCells(cells, quota);
+}
+
+function createBandGridCells(quota, z, layers) {
+  const cells = [];
+  const width = 6;
+  const bands = [-2.8, 0, 2.8];
+  const layerInset = (layers - z - 1) * 0.08;
+
+  bands.forEach((centerY, band) => {
+    for (let row = -1; row <= 1; row += 1) {
+      for (let col = 0; col < width; col += 1) {
+        const sideTrim = row !== 0 && (col === 0 || col === width - 1) ? 0.42 : 0;
+        cells.push({
+          x: col - (width - 1) / 2,
+          y: centerY + row * (0.72 + layerInset),
+          order: band * 0.5 + Math.abs(row) * 0.18 + sideTrim + Math.abs(col - 2.5) * 0.03,
+        });
+      }
+    }
+  });
+
+  return fillStructuredCells(cells, quota);
+}
+
+function createRingGridCells(quota, z, layers) {
+  const cells = [];
+  const width = 7;
+  const height = 7;
+  const inner = 1 + (layers - z <= 2 ? 0 : 0.4);
+
+  for (let row = 0; row < height; row += 1) {
+    for (let col = 0; col < width; col += 1) {
+      const x = col - (width - 1) / 2;
+      const y = row - (height - 1) / 2;
+      const inHole = Math.abs(x) <= inner && Math.abs(y) <= inner;
+      if (inHole && quota < 32) continue;
+      const edgeDistance = Math.max(Math.abs(x), Math.abs(y));
+      cells.push({
+        x,
+        y,
+        order: (inHole ? 2.8 : 0) + Math.abs(edgeDistance - 3) * 0.24 + Math.abs(x) * 0.02,
+      });
+    }
+  }
+
+  return fillStructuredCells(cells, quota);
+}
+
+function fillStructuredCells(cells, quota) {
+  const sorted = cells.sort((a, b) => a.order - b.order);
+  if (sorted.length >= quota) return sorted;
+
+  const extra = [];
+  for (let ring = 1; sorted.length + extra.length < quota; ring += 1) {
+    sorted.forEach((cell) => {
+      if (sorted.length + extra.length >= quota) return;
+      extra.push({
+        x: cell.x + ((extra.length % 3) - 1) * 0.34,
+        y: cell.y + (ring % 2 ? 0.38 : -0.38),
+        order: cell.order + ring * 4 + extra.length * 0.02,
+      });
+    });
+  }
+
+  return [...sorted, ...extra];
 }
 
 function selectReadableCandidates(candidates, quota, minSpacing) {
@@ -2061,7 +2163,7 @@ document.addEventListener("visibilitychange", () => syncBgm());
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js?v=44").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=45").catch(() => {});
   });
 }
 
