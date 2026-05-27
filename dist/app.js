@@ -800,6 +800,7 @@ function renderBoard() {
     .sort((a, b) => a.z - b.z);
   const activeIds = new Set(activeTiles.map((tile) => tile.id));
   const queuedIds = new Set(state.pendingPickIds);
+  const surfaceLayer = activeTiles.reduce((maxLayer, tile) => Math.max(maxLayer, tile.z), 0);
 
   existingTiles.forEach((node, id) => {
     if (!activeIds.has(id)) node.remove();
@@ -815,7 +816,7 @@ function renderBoard() {
     node.style.left = `${x}%`;
     node.style.top = `${y}%`;
     node.style.zIndex = String(getTileStackRank(tile));
-    syncBoardLayerStyle(node, tile);
+    syncBoardLayerStyle(node, tile, surfaceLayer);
     node.classList.toggle("is-free", isFree);
     node.classList.toggle("is-blocked", !isFree);
     node.classList.toggle("is-queued", queuedIds.has(tile.id));
@@ -824,6 +825,7 @@ function renderBoard() {
     node.dataset.tileId = tile.id;
     node.dataset.free = String(isFree);
     node.dataset.layer = String(tile.z);
+    node.dataset.depth = String(Math.max(0, surfaceLayer - tile.z));
     node.onclick = () => pickTile(tile.id, node);
     if (node.parentElement !== els.board) els.board.appendChild(node);
   });
@@ -1833,10 +1835,12 @@ function getBoardMap() {
   };
 }
 
-function syncBoardLayerStyle(node, tile) {
+function syncBoardLayerStyle(node, tile, surfaceLayer = tile.z) {
   const level = LEVELS[state.levelIndex] ?? LEVELS[0];
   const maxLayer = Math.max(1, (level.layers ?? 1) - 1);
   const layerT = clamp(tile.z / maxLayer, 0, 1);
+  const depth = Math.max(0, surfaceLayer - tile.z);
+  const depthT = clamp(depth / Math.max(1, Math.min(maxLayer, 5)), 0, 1);
   const sideY = 4.4 + layerT * 5.2;
   const slabX = 1 + layerT * 1.8;
   const shadowY = 8 + layerT * 7.4;
@@ -1851,6 +1855,15 @@ function syncBoardLayerStyle(node, tile) {
   const sideBlue = Math.round(31 + layerT * 10);
   const topFade = 0.94 + layerT * 0.05;
   const bottomFade = 0.82 + layerT * 0.08;
+  const blockedTop = Math.round(198 - depthT * 92);
+  const blockedBottom = Math.round(142 - depthT * 72);
+  const blockedBorder = Math.round(226 - depthT * 70);
+  const blockedSide = Math.round(70 - depthT * 32);
+  const blockedHighlight = 0.28 - depthT * 0.18;
+  const blockedOverlay = 0.13 + depthT * 0.36;
+  const blockedStripe = 0.1 + depthT * 0.14;
+  const blockedBrightness = 0.88 - depthT * 0.36;
+  const blockedContrast = 0.96 - depthT * 0.08;
 
   node.style.setProperty("--tile-side-y", `${sideY.toFixed(1)}px`);
   node.style.setProperty("--tile-slab-x", `${slabX.toFixed(1)}px`);
@@ -1864,6 +1877,14 @@ function syncBoardLayerStyle(node, tile) {
   node.style.setProperty("--tile-corner-tint", `rgba(255, 228, 162, ${(0.12 + layerT * 0.18).toFixed(2)})`);
   node.style.setProperty("--tile-top-color", `rgba(255, 250, 232, ${topFade.toFixed(2)})`);
   node.style.setProperty("--tile-bottom-color", `rgba(207, 176, 118, ${bottomFade.toFixed(2)})`);
+  node.style.setProperty("--tile-blocked-top-color", `rgba(${blockedTop}, ${blockedTop}, ${Math.max(72, blockedTop - 8)}, 0.98)`);
+  node.style.setProperty("--tile-blocked-bottom-color", `rgba(${blockedBottom}, ${Math.max(58, blockedBottom - 5)}, ${Math.max(46, blockedBottom - 16)}, 0.98)`);
+  node.style.setProperty("--tile-blocked-border-color", `rgba(${blockedBorder}, ${blockedBorder}, ${Math.max(112, blockedBorder - 30)}, ${(0.78 - depthT * 0.16).toFixed(2)})`);
+  node.style.setProperty("--tile-blocked-side-color", `rgba(${blockedSide}, ${Math.max(34, blockedSide - 8)}, ${Math.max(26, blockedSide - 14)}, ${(0.34 + depthT * 0.18).toFixed(2)})`);
+  node.style.setProperty("--tile-blocked-overlay-color", `rgba(20, 20, 18, ${blockedOverlay.toFixed(2)})`);
+  node.style.setProperty("--tile-blocked-stripe-color", `rgba(255, 255, 255, ${blockedStripe.toFixed(2)})`);
+  node.style.setProperty("--tile-blocked-highlight-color", `rgba(255, 255, 255, ${blockedHighlight.toFixed(2)})`);
+  node.style.setProperty("--tile-blocked-icon-filter", `grayscale(1) brightness(${blockedBrightness.toFixed(2)}) contrast(${blockedContrast.toFixed(2)}) drop-shadow(0 2px 1px rgba(22, 18, 14, 0.18))`);
 }
 
 function getBoardBounds() {
@@ -1946,7 +1967,7 @@ document.addEventListener("visibilitychange", () => syncBgm());
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js?v=42").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=43").catch(() => {});
   });
 }
 

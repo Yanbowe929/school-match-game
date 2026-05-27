@@ -532,6 +532,14 @@ h2 {
   --tile-side-color: rgba(91, 55, 31, 0.5);
   --tile-slab-shadow-color: rgba(33, 22, 15, 0.24);
   --tile-shadow-color: rgba(10, 9, 8, 0.3);
+  --tile-blocked-top-color: rgba(186, 181, 166, 0.98);
+  --tile-blocked-bottom-color: rgba(91, 86, 78, 0.98);
+  --tile-blocked-border-color: rgba(210, 210, 178, 0.72);
+  --tile-blocked-side-color: rgba(61, 54, 48, 0.42);
+  --tile-blocked-overlay-color: rgba(20, 20, 18, 0.22);
+  --tile-blocked-stripe-color: rgba(255, 255, 255, 0.1);
+  --tile-blocked-highlight-color: rgba(255, 255, 255, 0.2);
+  --tile-blocked-icon-filter: grayscale(0.88) brightness(0.72) contrast(0.96) drop-shadow(0 2px 1px rgba(22, 18, 14, 0.2));
   --tile-side-y: 8px;
   --tile-slab-x: 1.4px;
   --tile-shadow-y: 13px;
@@ -602,17 +610,18 @@ h2 {
 }
 
 .tile.is-blocked {
+  border-color: var(--tile-blocked-border-color);
   opacity: 1;
   pointer-events: none;
   transform: translate3d(0, 0, 0);
   background:
-    linear-gradient(145deg, rgba(186, 181, 166, 0.98), rgba(91, 86, 78, 0.98)),
+    linear-gradient(145deg, var(--tile-blocked-top-color), var(--tile-blocked-bottom-color)),
     #7d786b;
   box-shadow:
-    0 var(--tile-side-y) 0 rgba(61, 54, 48, 0.42),
+    0 var(--tile-side-y) 0 var(--tile-blocked-side-color),
     var(--tile-slab-x) calc(var(--tile-side-y) + 2px) 0 rgba(29, 24, 20, 0.26),
     0 var(--tile-shadow-y) var(--tile-shadow-blur) rgba(17, 15, 13, 0.24),
-    inset 0 2px 0 rgba(255, 255, 255, 0.28);
+    inset 0 2px 0 var(--tile-blocked-highlight-color);
 }
 
 .tile.is-blocked::after {
@@ -621,19 +630,19 @@ h2 {
   inset: 0;
   border-radius: inherit;
   background:
-    linear-gradient(rgba(32, 31, 29, 0.16), rgba(32, 31, 29, 0.24)),
+    linear-gradient(var(--tile-blocked-overlay-color), var(--tile-blocked-overlay-color)),
     repeating-linear-gradient(
       -45deg,
       rgba(38, 50, 71, 0.14) 0,
       rgba(38, 50, 71, 0.14) 4px,
-      rgba(255, 255, 255, 0.1) 4px,
-      rgba(255, 255, 255, 0.1) 8px
+      var(--tile-blocked-stripe-color) 4px,
+      var(--tile-blocked-stripe-color) 8px
     );
   pointer-events: none;
 }
 
 .tile.is-blocked .tile-icon {
-  filter: grayscale(0.88) brightness(0.72) contrast(0.96) drop-shadow(0 2px 1px rgba(22, 18, 14, 0.2));
+  filter: var(--tile-blocked-icon-filter);
 }
 
 .tile-icon {
