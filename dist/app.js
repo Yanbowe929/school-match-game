@@ -815,6 +815,7 @@ function renderBoard() {
     node.style.left = `${x}%`;
     node.style.top = `${y}%`;
     node.style.zIndex = String(getTileStackRank(tile));
+    syncBoardLayerStyle(node, tile);
     node.classList.toggle("is-free", isFree);
     node.classList.toggle("is-blocked", !isFree);
     node.classList.toggle("is-queued", queuedIds.has(tile.id));
@@ -1832,6 +1833,39 @@ function getBoardMap() {
   };
 }
 
+function syncBoardLayerStyle(node, tile) {
+  const level = LEVELS[state.levelIndex] ?? LEVELS[0];
+  const maxLayer = Math.max(1, (level.layers ?? 1) - 1);
+  const layerT = clamp(tile.z / maxLayer, 0, 1);
+  const sideY = 4.4 + layerT * 5.2;
+  const slabX = 1 + layerT * 1.8;
+  const shadowY = 8 + layerT * 7.4;
+  const shadowBlur = 10 + layerT * 9;
+  const shadowAlpha = 0.24 + layerT * 0.16;
+  const sideAlpha = 0.42 + layerT * 0.2;
+  const highlightAlpha = 0.38 + layerT * 0.22;
+  const borderGreen = Math.round(226 + layerT * 18);
+  const borderBlue = Math.round(184 + layerT * 25);
+  const sideRed = Math.round(78 + layerT * 32);
+  const sideGreen = Math.round(52 + layerT * 18);
+  const sideBlue = Math.round(31 + layerT * 10);
+  const topFade = 0.94 + layerT * 0.05;
+  const bottomFade = 0.82 + layerT * 0.08;
+
+  node.style.setProperty("--tile-side-y", `${sideY.toFixed(1)}px`);
+  node.style.setProperty("--tile-slab-x", `${slabX.toFixed(1)}px`);
+  node.style.setProperty("--tile-shadow-y", `${shadowY.toFixed(1)}px`);
+  node.style.setProperty("--tile-shadow-blur", `${shadowBlur.toFixed(1)}px`);
+  node.style.setProperty("--tile-shadow-color", `rgba(8, 7, 6, ${shadowAlpha.toFixed(2)})`);
+  node.style.setProperty("--tile-side-color", `rgba(${sideRed}, ${sideGreen}, ${sideBlue}, ${sideAlpha.toFixed(2)})`);
+  node.style.setProperty("--tile-slab-shadow-color", `rgba(33, 22, 15, ${(0.22 + layerT * 0.16).toFixed(2)})`);
+  node.style.setProperty("--tile-border-color", `rgba(255, ${borderGreen}, ${borderBlue}, ${(0.82 + layerT * 0.12).toFixed(2)})`);
+  node.style.setProperty("--tile-highlight-color", `rgba(255, 255, 255, ${highlightAlpha.toFixed(2)})`);
+  node.style.setProperty("--tile-corner-tint", `rgba(255, 228, 162, ${(0.12 + layerT * 0.18).toFixed(2)})`);
+  node.style.setProperty("--tile-top-color", `rgba(255, 250, 232, ${topFade.toFixed(2)})`);
+  node.style.setProperty("--tile-bottom-color", `rgba(207, 176, 118, ${bottomFade.toFixed(2)})`);
+}
+
 function getBoardBounds() {
   const level = LEVELS[state.levelIndex] ?? LEVELS[0];
   return {
@@ -1912,7 +1946,7 @@ document.addEventListener("visibilitychange", () => syncBgm());
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js?v=41").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=42").catch(() => {});
   });
 }
 

@@ -1,10 +1,10 @@
-const CACHE_NAME = "school-match-cache-v41";
+const CACHE_NAME = "school-match-cache-v42";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles-v41.css",
-  "./app-v41.js",
-  "./manifest-v41.json",
+  "./styles-v42.css",
+  "./app-v42.js",
+  "./manifest-v42.json",
   "./assets/apple-touch-icon-ios26.png",
   "./assets/favicon-32-ios26.png",
   "./assets/pwa-icon-192-ios26.png",
