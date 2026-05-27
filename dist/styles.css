@@ -645,6 +645,31 @@ h2 {
   filter: var(--tile-blocked-icon-filter);
 }
 
+.tile.is-hidden-under {
+  border-color: rgba(160, 158, 132, 0.52);
+}
+
+.tile.is-hidden-under::before {
+  opacity: 0.32;
+}
+
+.tile.is-hidden-under::after {
+  background:
+    linear-gradient(rgba(18, 18, 16, 0.54), rgba(18, 18, 16, 0.6)),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(36, 42, 44, 0.16) 0,
+      rgba(36, 42, 44, 0.16) 4px,
+      rgba(255, 255, 255, 0.08) 4px,
+      rgba(255, 255, 255, 0.08) 8px
+    );
+}
+
+.tile.is-hidden-under .tile-icon {
+  opacity: 0.12;
+  filter: grayscale(1) brightness(0.38) contrast(0.82);
+}
+
 .tile-icon {
   position: absolute;
   display: block;

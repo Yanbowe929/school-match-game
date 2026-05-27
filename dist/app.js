@@ -57,6 +57,7 @@ const LEVELS = [
     boardMapYOffset: 4,
     openingMatchGroups: 3,
     surfaceMatchGroups: [4, 3, 2],
+    structuredHardLayout: true,
     timeLimit: 240,
     timeBonus: 15,
     hardLayouts: ["islands", "snake", "sandwich", "lockbox"],
@@ -526,6 +527,10 @@ function createClusteredSpots(level, count, rng) {
 }
 
 function createHardLayoutSpots(level, count, rng, layout) {
+  if (level.structuredHardLayout) {
+    return createStructuredHardLayoutSpots(level, count, rng, layout);
+  }
+
   const quotas = createLayerQuotas(count, level.layers, level);
   const spots = [];
 
@@ -545,6 +550,58 @@ function createHardLayoutSpots(level, count, rng, layout) {
   });
 
   return spots.sort((a, b) => a.z - b.z || getTileStackRank(a) - getTileStackRank(b));
+}
+
+function createStructuredHardLayoutSpots(level, count, rng, layout) {
+  const quotas = createLayerQuotas(count, level.layers, level);
+  const spots = [];
+
+  quotas.forEach((quota, z) => {
+    createStructuredGridCandidates(level, quota, z, layout, rng)
+      .slice(0, quota)
+      .forEach(({ order, ...spot }) => spots.push(spot));
+  });
+
+  return spots.sort((a, b) => a.z - b.z || getTileStackRank(a) - getTileStackRank(b));
+}
+
+function createStructuredGridCandidates(level, quota, z, layout, rng) {
+  const layerT = level.layers <= 1 ? 0 : z / (level.layers - 1);
+  const cols = Math.max(5, Math.min(7, Math.ceil(Math.sqrt(quota * 1.16))));
+  const rows = Math.max(4, Math.ceil(quota / cols));
+  const stepX = 2.42 - layerT * 0.04;
+  const stepY = 2.34 - layerT * 0.05;
+  const centerX = (level.cols - 1) / 2;
+  const centerY = (level.rows - 1) / 2;
+  const midLayer = (level.layers - 1) / 2;
+  const layoutBias = {
+    islands: -0.16,
+    snake: 0.12,
+    sandwich: 0,
+    lockbox: 0.18,
+  }[layout] ?? 0;
+  const layerShiftX = ((z % 2) ? 0.46 : -0.46) + (z - midLayer) * 0.1 + layoutBias;
+  const layerShiftY = (((z + 1) % 2) ? 0.36 : -0.36) + (midLayer - z) * 0.07;
+  const candidates = [];
+
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      const dx = (col - (cols - 1) / 2) * stepX;
+      const dy = (row - (rows - 1) / 2) * stepY;
+      const corner = Math.abs(col - (cols - 1) / 2) + Math.abs(row - (rows - 1) / 2);
+      const isCorner = (col === 0 || col === cols - 1) && (row === 0 || row === rows - 1);
+      candidates.push({
+        x: clamp(centerX + dx + layerShiftX, 0.2, level.cols + level.layers * 0.28),
+        y: clamp(centerY + dy + layerShiftY, 0.2, level.rows + level.layers * 0.28),
+        z,
+        jitterX: 0,
+        jitterY: 0,
+        order: corner + (isCorner ? 0.42 : 0) + rng() * 0.015,
+      });
+    }
+  }
+
+  return candidates.sort((a, b) => a.order - b.order);
 }
 
 function selectReadableCandidates(candidates, quota, minSpacing) {
@@ -801,6 +858,11 @@ function renderBoard() {
   const activeIds = new Set(activeTiles.map((tile) => tile.id));
   const queuedIds = new Set(state.pendingPickIds);
   const surfaceLayer = activeTiles.reduce((maxLayer, tile) => Math.max(maxLayer, tile.z), 0);
+  const boardBox = els.board.getBoundingClientRect();
+  const tileSize = getTileSizePx();
+  const rects = new Map(
+    activeTiles.map((tile) => [tile.id, getTileRect(tile, bounds, boardBox, tileSize)]),
+  );
 
   existingTiles.forEach((node, id) => {
     if (!activeIds.has(id)) node.remove();
@@ -811,6 +873,8 @@ function renderBoard() {
     const { x, y } = getTileBoardPosition(tile, bounds);
     const isFree = freeIds.has(tile.id);
     const disabled = !isFree || state.finished || state.animatingMatch;
+    const cover = getTileCoverStats(tile, activeTiles, rects, tileSize);
+    const hiddenUnder = !isFree && (cover.maxRatio >= 0.62 || cover.totalRatio >= 0.82);
 
     syncTileArtwork(node, tile);
     node.style.left = `${x}%`;
@@ -819,6 +883,7 @@ function renderBoard() {
     syncBoardLayerStyle(node, tile, surfaceLayer);
     node.classList.toggle("is-free", isFree);
     node.classList.toggle("is-blocked", !isFree);
+    node.classList.toggle("is-hidden-under", hiddenUnder);
     node.classList.toggle("is-queued", queuedIds.has(tile.id));
     node.disabled = disabled;
     node.setAttribute("aria-disabled", String(disabled));
@@ -826,6 +891,7 @@ function renderBoard() {
     node.dataset.free = String(isFree);
     node.dataset.layer = String(tile.z);
     node.dataset.depth = String(Math.max(0, surfaceLayer - tile.z));
+    node.dataset.cover = cover.totalRatio.toFixed(2);
     node.onclick = () => pickTile(tile.id, node);
     if (node.parentElement !== els.board) els.board.appendChild(node);
   });
@@ -1784,6 +1850,34 @@ function getTileRect(tile, bounds, boardBox, tileSize) {
   };
 }
 
+function getTileCoverStats(tile, activeTiles, rects, tileSize) {
+  const base = rects.get(tile.id);
+  if (!base) return { totalRatio: 0, maxRatio: 0 };
+
+  let totalRatio = 0;
+  let maxRatio = 0;
+
+  activeTiles.forEach((other) => {
+    if (other.id === tile.id || getTileStackRank(other) <= getTileStackRank(tile)) return;
+    const ratio = getOverlapRatio(base, rects.get(other.id), tileSize);
+    totalRatio += ratio;
+    maxRatio = Math.max(maxRatio, ratio);
+  });
+
+  return {
+    totalRatio: Math.min(1, totalRatio),
+    maxRatio,
+  };
+}
+
+function getOverlapRatio(base, cover, tileSize) {
+  if (!base || !cover) return 0;
+  const overlapX = Math.min(base.right, cover.right) - Math.max(base.left, cover.left);
+  const overlapY = Math.min(base.bottom, cover.bottom) - Math.max(base.top, cover.top);
+  if (overlapX <= 0 || overlapY <= 0) return 0;
+  return (overlapX * overlapY) / (tileSize * tileSize);
+}
+
 function hasMeaningfulOverlap(base, cover, tileSize, sameLayer = false) {
   if (!base || !cover) return false;
   const coverMargin = sameLayer ? tileSize * 0.02 : tileSize * 0.08;
@@ -1967,7 +2061,7 @@ document.addEventListener("visibilitychange", () => syncBgm());
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js?v=43").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=44").catch(() => {});
   });
 }
 
