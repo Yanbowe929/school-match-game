@@ -12,11 +12,11 @@
     <meta name="apple-mobile-web-app-title" content="课间三消" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>课间三消</title>
-    <link rel="manifest" href="./manifest-v46.json" />
+    <link rel="manifest" href="./manifest-v47.json" />
     <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon-ios26.png" />
     <link rel="apple-touch-icon-precomposed" sizes="180x180" href="./assets/apple-touch-icon-ios26.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32-ios26.png" />
-    <link rel="stylesheet" href="./styles-v46.css" />
+    <link rel="stylesheet" href="./styles-v47.css" />
   </head>
   <body>
     <main class="game-shell" aria-label="课间三消游戏">
@@ -28,6 +28,7 @@
           <p class="start-copy">把课桌上的整蛊证据凑成三件套，赶在巡查前塞回抽屉。</p>
           <div class="level-select" id="levelSelect" aria-label="选择关卡"></div>
           <button class="primary-button" id="startButton" type="button">开始挑战</button>
+          <button class="rules-entry-button" id="startRulesButton" type="button">查看规则</button>
         </div>
       </section>
 
@@ -43,6 +44,7 @@
             <span>♪</span>
             <input id="volumeSlider" type="range" min="0" max="100" step="1" value="28" />
           </label>
+          <button class="icon-button" id="gameRulesButton" type="button" aria-label="查看规则">?</button>
           <button class="icon-button" id="soundButton" type="button" aria-label="音效开关">♪</button>
           <button class="icon-button" id="restartButton" type="button" aria-label="重新开始">↻</button>
         </header>
@@ -99,14 +101,46 @@
             <span>分数 <strong id="resultScore">0</strong></span>
             <span>步数 <strong id="resultMoves">0</strong></span>
           </div>
+          <button class="rules-entry-button result-rules-button" id="resultRulesButton" type="button">查看星级规则</button>
           <div class="result-actions">
             <button class="secondary-button" id="resultRestartButton" type="button">再来一次</button>
             <button class="primary-button" id="nextButton" type="button">下一关</button>
           </div>
         </div>
       </section>
+
+      <div class="rules-overlay" id="rulesOverlay" aria-hidden="true">
+        <section class="rules-modal" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+          <button class="rules-close-button" id="rulesCloseButton" type="button" aria-label="关闭规则">×</button>
+          <p class="eyebrow">Game Rules</p>
+          <h2 id="rulesTitle">游戏规则</h2>
+          <div class="rules-scroll">
+            <article class="rule-block">
+              <h3>目标</h3>
+              <p>每天 3 关，通关一关解锁下一关。把中间牌堆、下方缓存区、移出暂存区全部清空就算通关；缓存区 7 格塞满，或第三关倒计时归零，就会失败。</p>
+            </article>
+            <article class="rule-block">
+              <h3>拿牌</h3>
+              <p>亮色牌可以点击，灰色牌被上层压住暂时不能拿。灰得越深，说明离当前可拿层越远。任意 3 张同种牌进入缓存区后会立即消除。</p>
+            </article>
+            <article class="rule-block">
+              <h3>道具</h3>
+              <p>每局洗牌、移出、磁吸各 3 次。洗牌会重排中间剩余牌的图案；移出会把缓存区前几张暂放到右下角，可再点回；磁吸只在缓存区已有 2 张同种牌时可用，会从中间吸出第 3 张补成一组。</p>
+            </article>
+            <article class="rule-block">
+              <h3>计分与时间</h3>
+              <p>拿牌得分，三消得分，连消会加更多分；使用道具会扣一点分。第三关限时 4 分钟，每次三消会补 15 秒。</p>
+            </article>
+            <article class="rule-block">
+              <h3>星级</h3>
+              <p>通关默认 3 星。额外步数超过 2，或道具用了 2 次及以上，降为 2 星；额外步数超过 6，或道具用了 4 次及以上，降为 1 星。通关最低保底 1 星。</p>
+              <p>第三关一共 192 张牌：不超过 194 步且最多用 1 次道具是 3 星；195 到 198 步或用了 2 到 3 次道具是 2 星；超过 198 步或用了 4 次及以上道具是 1 星。</p>
+            </article>
+          </div>
+        </section>
+      </div>
     </main>
 
-    <script src="./app-v46.js"></script>
+    <script src="./app-v47.js"></script>
   </body>
 </html>

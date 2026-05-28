@@ -278,6 +278,21 @@ h2 {
   color: #2d2119;
 }
 
+.rules-entry-button {
+  min-height: 38px;
+  margin-top: 12px;
+  padding: 0 18px;
+  border: 2px solid rgba(255, 238, 191, 0.66);
+  border-radius: 999px;
+  background: rgba(37, 29, 23, 0.62);
+  color: #fff0ce;
+  font-size: 13px;
+  font-weight: 900;
+  box-shadow:
+    0 5px 0 rgba(34, 22, 15, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
 .screen-game {
   flex-direction: column;
   gap: 10px;
@@ -290,9 +305,9 @@ h2 {
 
 .top-bar {
   display: grid;
-  grid-template-columns: 42px minmax(92px, 1fr) minmax(84px, 104px) 42px 42px;
+  grid-template-columns: 42px minmax(82px, 1fr) minmax(72px, 96px) 42px 42px 42px;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   min-height: 44px;
 }
 
@@ -1123,11 +1138,124 @@ h2 {
   font-size: 16px;
 }
 
+.result-rules-button {
+  width: 100%;
+  margin-top: 12px;
+  background: rgba(255, 241, 203, 0.16);
+}
+
 .result-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   margin-top: 18px;
+}
+
+.rules-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding:
+    calc(var(--safe-top) + 18px)
+    calc(var(--safe-right) + 12px)
+    calc(var(--safe-bottom) + 18px)
+    calc(var(--safe-left) + 12px);
+  background: rgba(12, 9, 8, 0.62);
+  backdrop-filter: blur(5px);
+}
+
+.rules-overlay.is-visible {
+  display: flex;
+}
+
+.rules-modal {
+  position: relative;
+  display: flex;
+  width: min(100%, 370px);
+  max-height: min(82vh, 680px);
+  flex-direction: column;
+  padding: 30px 18px 18px;
+  border: 3px solid rgba(255, 231, 176, 0.82);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 210, 108, 0.32), transparent 34%),
+    linear-gradient(180deg, rgba(64, 48, 34, 0.98), rgba(132, 91, 47, 0.98) 62%, rgba(51, 34, 25, 0.98));
+  color: #fff2cf;
+  box-shadow:
+    0 13px 0 rgba(46, 27, 18, 0.78),
+    0 30px 54px rgba(5, 4, 4, 0.48),
+    inset 0 2px 0 rgba(255, 255, 255, 0.25),
+    inset 0 0 0 2px rgba(122, 70, 35, 0.52);
+}
+
+.rules-close-button {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 2px solid rgba(255, 238, 191, 0.72);
+  border-radius: 50%;
+  background: linear-gradient(180deg, rgba(255, 246, 218, 0.96), rgba(191, 151, 91, 0.92));
+  color: #211915;
+  font-size: 24px;
+  font-weight: 1000;
+  line-height: 1;
+  box-shadow:
+    0 4px 0 rgba(59, 37, 24, 0.34),
+    0 10px 16px rgba(11, 9, 8, 0.22);
+}
+
+.rules-modal .eyebrow {
+  margin-right: 44px;
+}
+
+.rules-modal h2 {
+  margin-right: 44px;
+  font-size: 34px;
+}
+
+.rules-scroll {
+  min-height: 0;
+  margin-top: 12px;
+  padding-right: 4px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.rule-block {
+  padding: 11px 0;
+  border-top: 1px solid rgba(255, 231, 176, 0.22);
+}
+
+.rule-block:first-child {
+  border-top: 0;
+}
+
+.rule-block h3 {
+  margin: 0 0 5px;
+  color: #ffd36f;
+  font-size: 16px;
+  font-weight: 1000;
+}
+
+.rule-block p {
+  margin: 0;
+  color: #fff1cb;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.55;
+  text-shadow: 0 2px 8px rgba(19, 13, 9, 0.24);
+}
+
+.rule-block p + p {
+  margin-top: 6px;
 }
 
 @keyframes pop-in {
@@ -1384,6 +1512,39 @@ h2 {
   }
 }
 
+@media (max-width: 380px) {
+  .top-bar {
+    grid-template-columns: 38px minmax(74px, 1fr) minmax(62px, 80px) 38px 38px 38px;
+    gap: 4px;
+  }
+
+  .icon-button {
+    width: 38px;
+    height: 38px;
+    font-size: 22px;
+  }
+
+  .level-chip {
+    min-width: 88px;
+    min-height: 38px;
+    padding: 0 9px;
+    font-size: 13px;
+  }
+
+  .level-chip strong {
+    font-size: 20px;
+  }
+
+  .volume-control {
+    height: 38px;
+    padding: 0 7px;
+  }
+
+  .volume-control span {
+    font-size: 16px;
+  }
+}
+
 @media (max-height: 700px) {
   :root {
     --tile-size: clamp(40px, 12.8vw, 52px);
@@ -1407,5 +1568,23 @@ h2 {
 
   .tool-button {
     min-height: 50px;
+  }
+
+  .rules-modal {
+    max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 30px);
+    padding-top: 26px;
+  }
+
+  .rules-modal h2 {
+    font-size: 30px;
+  }
+
+  .rule-block {
+    padding: 8px 0;
+  }
+
+  .rule-block p {
+    font-size: 12px;
+    line-height: 1.45;
   }
 }

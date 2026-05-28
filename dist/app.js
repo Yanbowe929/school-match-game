@@ -144,6 +144,11 @@ const els = {
   resultMoves: document.querySelector("#resultMoves"),
   resultRestartButton: document.querySelector("#resultRestartButton"),
   nextButton: document.querySelector("#nextButton"),
+  startRulesButton: document.querySelector("#startRulesButton"),
+  gameRulesButton: document.querySelector("#gameRulesButton"),
+  resultRulesButton: document.querySelector("#resultRulesButton"),
+  rulesOverlay: document.querySelector("#rulesOverlay"),
+  rulesCloseButton: document.querySelector("#rulesCloseButton"),
 };
 
 const dailyKey = getDailyKey();
@@ -2153,6 +2158,19 @@ function nextLevelFromResult() {
   startGame(nextIndex);
 }
 
+function openRules() {
+  if (!els.rulesOverlay) return;
+  els.rulesOverlay.classList.add("is-visible");
+  els.rulesOverlay.setAttribute("aria-hidden", "false");
+  els.rulesCloseButton?.focus({ preventScroll: true });
+}
+
+function closeRules() {
+  if (!els.rulesOverlay) return;
+  els.rulesOverlay.classList.remove("is-visible");
+  els.rulesOverlay.setAttribute("aria-hidden", "true");
+}
+
 function shuffleArray(items, rng = Math.random) {
   for (let i = items.length - 1; i > 0; i -= 1) {
     const j = Math.floor(rng() * (i + 1));
@@ -2171,15 +2189,28 @@ els.stashButton.addEventListener("click", stashTiles);
 els.magnetButton.addEventListener("click", magnetTiles);
 els.soundButton.addEventListener("click", toggleSound);
 els.volumeSlider?.addEventListener("input", (event) => setBgmVolume(Number(event.target.value) / 100));
+els.startRulesButton?.addEventListener("click", openRules);
+els.gameRulesButton?.addEventListener("click", openRules);
+els.resultRulesButton?.addEventListener("click", openRules);
+els.rulesCloseButton?.addEventListener("click", closeRules);
+els.rulesOverlay?.addEventListener("click", (event) => {
+  if (event.target === els.rulesOverlay) closeRules();
+});
 
-document.addEventListener("touchmove", (event) => event.preventDefault(), { passive: false });
+document.addEventListener("touchmove", (event) => {
+  if (event.target.closest?.(".rules-scroll")) return;
+  event.preventDefault();
+}, { passive: false });
 document.addEventListener("pointerdown", unlockAudio, { passive: true });
 document.addEventListener("touchstart", unlockAudio, { passive: true });
 document.addEventListener("visibilitychange", () => syncBgm());
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && els.rulesOverlay?.classList.contains("is-visible")) closeRules();
+});
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js?v=46").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=47").catch(() => {});
   });
 }
 
