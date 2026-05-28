@@ -998,7 +998,7 @@ function renderBoard() {
     const node = existingTiles.get(tile.id) ?? createTileNode(tile);
     const { x, y } = getTileBoardPosition(tile, bounds);
     const isFree = freeIds.has(tile.id);
-    const disabled = !isFree || state.finished || state.animatingMatch;
+    const disabled = !isFree || state.finished;
     const cover = getTileCoverStats(tile, activeTiles, rects, tileSize);
     const hiddenUnder = !isFree && (cover.maxRatio >= 0.62 || cover.totalRatio >= 0.82);
 
@@ -2210,7 +2210,7 @@ document.addEventListener("keydown", (event) => {
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js?v=47").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=48").catch(() => {});
   });
 }
 
