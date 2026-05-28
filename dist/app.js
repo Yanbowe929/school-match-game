@@ -67,6 +67,11 @@ const LEVELS = [
 
 const TRAY_LIMIT = 7;
 const STASH_LIMIT = 3;
+const DEFAULT_TOOL_USES = {
+  shuffle: 3,
+  stash: 3,
+  magnet: 3,
+};
 const STORAGE_KEY = "school-match-progress-v1";
 const SETTINGS_KEY = "school-match-settings-v1";
 const BGM_SOURCE = "./assets/bgm-school-prank-v2.wav";
@@ -167,11 +172,7 @@ let state = {
   tray: [],
   stashed: [],
   total: 0,
-  toolUses: {
-    shuffle: 2,
-    stash: 1,
-    magnet: 2,
-  },
+  toolUses: { ...DEFAULT_TOOL_USES },
   score: 0,
   moves: 0,
   timeLimit: 0,
@@ -344,11 +345,7 @@ function startGame(levelIndex = 0) {
     tray: [],
     stashed: [],
     total: 0,
-    toolUses: {
-      shuffle: 2,
-      stash: 1,
-      magnet: 2,
-    },
+    toolUses: { ...DEFAULT_TOOL_USES },
     score: 0,
     moves: 0,
     timeLimit: level.timeLimit ?? 0,
@@ -562,7 +559,29 @@ function createStructuredHardLayoutSpots(level, count, rng, layout) {
       .forEach(({ order, ...spot }) => spots.push(spot));
   });
 
-  return spots.sort((a, b) => a.z - b.z || getTileStackRank(a) - getTileStackRank(b));
+  return centerStructuredSpots(spots, level)
+    .sort((a, b) => a.z - b.z || getTileStackRank(a) - getTileStackRank(b));
+}
+
+function centerStructuredSpots(spots, level) {
+  if (spots.length === 0) return spots;
+
+  const minX = Math.min(...spots.map((spot) => spot.x));
+  const maxX = Math.max(...spots.map((spot) => spot.x));
+  const minY = Math.min(...spots.map((spot) => spot.y));
+  const maxY = Math.max(...spots.map((spot) => spot.y));
+  const viewMinX = level.viewMinX ?? -0.4;
+  const viewMinY = level.viewMinY ?? -0.4;
+  const viewWidth = level.viewWidth ?? level.cols + level.layers * 0.45;
+  const viewHeight = level.viewHeight ?? level.rows + level.layers * 0.45;
+  const shiftX = viewMinX + viewWidth / 2 - (minX + maxX) / 2;
+  const shiftY = viewMinY + viewHeight / 2 - (minY + maxY) / 2;
+
+  return spots.map((spot) => ({
+    ...spot,
+    x: spot.x + shiftX,
+    y: spot.y + shiftY,
+  }));
 }
 
 function createStructuredGridCandidates(level, quota, z, layout, rng) {
@@ -1441,7 +1460,8 @@ function finish(won) {
 function calculateStars(won) {
   if (!won) return 0;
   const remainingTools = (state.toolUses.shuffle ?? 0) + (state.toolUses.stash ?? 0) + (state.toolUses.magnet ?? 0);
-  const spentTools = 5 - remainingTools;
+  const totalTools = Object.values(DEFAULT_TOOL_USES).reduce((sum, count) => sum + count, 0);
+  const spentTools = totalTools - remainingTools;
   const extraMoves = Math.max(0, state.moves - state.total);
   let stars = 3;
   if (extraMoves > 2 || spentTools > 1) stars -= 1;
@@ -1500,63 +1520,59 @@ function magnetTiles() {
     return;
   }
 
+  const tile = target.tile;
+  const sourceElement = findBoardTileNode(tile.id);
+  const sourceRect = sourceElement?.getBoundingClientRect();
+
   clearHints();
-  target.tiles.forEach((tile) => {
-    tile.removed = true;
-    insertIntoTray({ id: tile.id, type: tile.type });
-  });
-  state.moves += target.tiles.length;
+  tile.removed = true;
+  state.pendingPickIds = state.pendingPickIds.filter((id) => id !== tile.id);
+  const trayIndex = insertIntoTray({ id: tile.id, type: tile.type, arriving: true });
+  state.arrivingIds = [...new Set([...state.arrivingIds, tile.id])];
+  state.flightCount += 1;
   state.toolUses.magnet -= 1;
   addScore(-20);
-  showToast(`磁吸 ${target.tiles.length} 张`);
+  showToast("磁吸补齐一组");
   playFeedback("tool");
-
-  const matched = findTrayMatch(target.type);
-  if (matched.length > 0) {
-    startMatchAnimation(matched);
-    return;
-  }
-
   render();
-  evaluateGame();
+
+  const targetRect = getTraySlotTargetRect(trayIndex);
+  animateTileFlight({ id: tile.id, type: tile.type }, sourceRect, targetRect).then(() => {
+    state.moves += 1;
+    completeTileFlight(tile.id, tile.type);
+  });
 }
 
 function findMagnetTarget() {
   const space = TRAY_LIMIT - state.tray.length;
   if (space <= 0) return null;
 
-  const freeIds = getFreeTileIds();
-  const freeByType = new Map();
-  state.tiles
-    .filter((tile) => !tile.removed && freeIds.has(tile.id))
-    .forEach((tile) => {
-      const list = freeByType.get(tile.type) ?? [];
-      list.push(tile);
-      freeByType.set(tile.type, list);
-    });
-
-  freeByType.forEach((tiles) => {
-    tiles.sort((a, b) => getTileStackRank(b) - getTileStackRank(a));
-  });
-
   const trayCounts = new Map();
   state.tray.forEach((tile) => {
     trayCounts.set(tile.type, (trayCounts.get(tile.type) ?? 0) + 1);
   });
 
-  const candidates = TILE_TYPES.map((type) => {
-    const trayCount = trayCounts.get(type.id) ?? 0;
-    const need = trayCount > 0 ? 3 - trayCount : 3;
-    const tiles = freeByType.get(type.id) ?? [];
-    if (need <= 0 || need > space || tiles.length < need) return null;
-    return {
-      type: type.id,
-      tiles: tiles.slice(0, need),
-      score: trayCount * 100 + tiles.length * 4 - need,
-    };
-  }).filter(Boolean);
+  const pairTypes = new Set(
+    [...trayCounts.entries()]
+      .filter(([, count]) => count >= 2)
+      .map(([type]) => type),
+  );
+  if (pairTypes.size === 0) return null;
 
-  candidates.sort((a, b) => b.score - a.score || a.tiles.length - b.tiles.length);
+  const freeIds = getFreeTileIds();
+  const candidates = state.tiles
+    .filter((tile) => !tile.removed && pairTypes.has(tile.type))
+    .map((tile) => {
+      const trayCount = trayCounts.get(tile.type) ?? 0;
+      const isFree = freeIds.has(tile.id);
+      return {
+        type: tile.type,
+        tile,
+        score: trayCount * 1000 + (isFree ? 500 : 0) + getTileStackRank(tile) / 100000,
+      };
+    });
+
+  candidates.sort((a, b) => b.score - a.score);
   return candidates[0] ?? null;
 }
 
@@ -2163,7 +2179,7 @@ document.addEventListener("visibilitychange", () => syncBgm());
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js?v=45").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=46").catch(() => {});
   });
 }
 
